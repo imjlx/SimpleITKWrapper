@@ -8,12 +8,17 @@ import numpy as np
 import os
 from typing import List
 
-import ImageProcess.Atlas
-import ImageProcess.Image
-import ImageProcess.InfoStat
-from ImageProcess import Atlas
-from utils import OrganDict
-import Metric
+# import ImageProcess.Atlas
+# import ImageProcess.Image
+# import ImageProcess.InfoStat
+# from ImageProcess import Atlas
+# from utils import OrganDict
+# import Metric
+
+import sys
+sys.path.append("E:\\package")
+sys.path.append("E:\\package\\SimpleITKWrapper")
+import SimpleITKWrapper as sitkw
 
 
 # ======================================================================================================================
@@ -25,7 +30,7 @@ class RegistrationBase(object):
 
         # Set two images
         if fixed_image:
-            self.fixed_image = ImageProcess.Image.ReadImage(fixed_image)
+            self.fixed_image = sitkw.Image.ReadImage(fixed_image)
         else:
             self.fixed_image = None
         if moving_image is not None:
@@ -289,238 +294,188 @@ class RegistrationBase(object):
         plt.show()
 
 
-class TranslationRegistration(RegistrationBase):
-    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-        super(TranslationRegistration, self).__init__(fixed_image=fixed_image, moving_image=moving_image)
-        self.optimized_transform = sitk.TranslationTransform(3)
+# class TranslationRegistration(RegistrationBase):
+#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+#         super(TranslationRegistration, self).__init__(fixed_image=fixed_image, moving_image=moving_image)
+#         self.optimized_transform = sitk.TranslationTransform(3)
 
 
-class AffineRegistration(RegistrationBase):
-    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-        """
-        Regist two images using affine transformation
-        :param fixed_image:
-        :param moving_image:
-        :param kwargs: No kwargs needed
-        """
-        super().__init__(fixed_image, moving_image)
-        self.optimized_transform = sitk.AffineTransform(3)
+# class AffineRegistration(RegistrationBase):
+#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+#         """
+#         Regist two images using affine transformation
+#         :param fixed_image:
+#         :param moving_image:
+#         :param kwargs: No kwargs needed
+#         """
+#         super().__init__(fixed_image, moving_image)
+#         self.optimized_transform = sitk.AffineTransform(3)
 
 
-class BSplineRegistration(RegistrationBase):
-    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-        super().__init__(fixed_image, moving_image)
-        if (fixed_image is not None) and (moving_image is not None) and ("grid_physical_spacing" in kwargs):
-            self.DeclareOptimizedTransform(grid_physical_spacing=kwargs["grid_physical_spacing"])
+# class BSplineRegistration(RegistrationBase):
+#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+#         super().__init__(fixed_image, moving_image)
+#         if (fixed_image is not None) and (moving_image is not None) and ("grid_physical_spacing" in kwargs):
+#             self.DeclareOptimizedTransform(grid_physical_spacing=kwargs["grid_physical_spacing"])
 
-    def DeclareOptimizedTransform(self, grid_physical_spacing):
-        assert (self.fixed_image is not None) and (self.moving_image is not None), "Image unspecified."
-        image_physical_spacing = [
-            size * spacing for size, spacing in zip(self.fixed_image.GetSize(), self.fixed_image.GetSpacing())
-        ]
-        mesh_size = [
-            int(image_size / grid_spacing + 0.5)
-            for image_size, grid_spacing in zip(image_physical_spacing, grid_physical_spacing)
-        ]
+#     def DeclareOptimizedTransform(self, grid_physical_spacing):
+#         assert (self.fixed_image is not None) and (self.moving_image is not None), "Image unspecified."
+#         image_physical_spacing = [
+#             size * spacing for size, spacing in zip(self.fixed_image.GetSize(), self.fixed_image.GetSpacing())
+#         ]
+#         mesh_size = [
+#             int(image_size / grid_spacing + 0.5)
+#             for image_size, grid_spacing in zip(image_physical_spacing, grid_physical_spacing)
+#         ]
 
-        self.optimized_transform = sitk.BSplineTransformInitializer(
-            image1=self.fixed_image,
-            transformDomainMeshSize=mesh_size
-        )
+#         self.optimized_transform = sitk.BSplineTransformInitializer(
+#             image1=self.fixed_image,
+#             transformDomainMeshSize=mesh_size
+#         )
 
-        return self.optimized_transform
-
-
-# ======================================================================================================================
-# functions to generate helper image
-# ======================================================================================================================
-
-def create_3_organ_as_ref(atlas, save_path=None):
-    atlas: sitk.Image = ImageProcess.Image.ReadImage(atlas)
-
-    arr = sitk.GetArrayFromImage(atlas)  # By default, all background is 0
-    arr[sitk.GetArrayViewFromImage(atlas) != 0] = 1  # Set the whole body to 1
-    arr[sitk.GetArrayViewFromImage(atlas) == 33] = 0  # Set lung to 0
-    arr[sitk.GetArrayViewFromImage(atlas) == 46] = 10  # Set bone and marrow to 2
-    arr[sitk.GetArrayViewFromImage(atlas) == 47] = 10
-
-    mask = sitk.GetImageFromArray(arr)
-    mask.CopyInformation(atlas)
-
-    if save_path:
-        sitk.WriteImage(mask, save_path)
-
-    return mask
+#         return self.optimized_transform
 
 
-# ======================================================================================================================
-# Call Function
-# ======================================================================================================================
-def translation(pname):
-    patient = os.path.join(gender, pname)
-    fixed_image = patient + "\\Atlas.nii"
-    moving_image = "ICRP\\" + gender + "\\Atlas.nii"
-    save_path = "E:\\PETDose_dataset\\RegistrationData\\" + pname + "\\ICRP.nii"
+# # ======================================================================================================================
+# # functions to generate helper image
+# # ======================================================================================================================
 
-    TR = TranslationRegistration(fixed_image=fixed_image, moving_image=moving_image)
-    TR.CalculateInitialTransform()
-    TR.ApplyTransform(transform=TR.moving_initial_transform,
-                      img1=moving_image, referenceImage=fixed_image,
-                      save_path=save_path)
+# def create_3_organ_as_ref(atlas, save_path=None):
+#     atlas: sitk.Image = ImageProcess.Image.ReadImage(atlas)
 
+#     arr = sitk.GetArrayFromImage(atlas)  # By default, all background is 0
+#     arr[sitk.GetArrayViewFromImage(atlas) != 0] = 1  # Set the whole body to 1
+#     arr[sitk.GetArrayViewFromImage(atlas) == 33] = 0  # Set lung to 0
+#     arr[sitk.GetArrayViewFromImage(atlas) == 46] = 10  # Set bone and marrow to 2
+#     arr[sitk.GetArrayViewFromImage(atlas) == 47] = 10
 
-def affine(pname, registration_type="3organ", haveArm=True, nb_run=0, addMode=True):
-    patient = os.path.join(gender, pname)
-    save_path = patient + "\\regist_affine_"+str(nb_run)+".nii"
-    transform_save_path = patient + "\\Affine"+str(nb_run)+".tfm"
-    if haveArm:
-        atlas_patient = patient + "\\Atlas.nii"
-        ICRP = os.path.join("ICRP", gender)
-        atlas_ICRP = ICRP + "\\Atlas.nii"
-    else:
-        atlas_patient = patient + "\\Atlas.nii"
-        ICRP = os.path.join("ICRPnoArm", gender)
-        atlas_ICRP = ICRP + "\\Atlas_noArm.nii"
+#     mask = sitk.GetImageFromArray(arr)
+#     mask.CopyInformation(atlas)
 
-    if registration_type == "3organ":
-        ref_patient = create_3_organ_as_ref(atlas=atlas_patient)
-        ref_ICRP = create_3_organ_as_ref(atlas=atlas_ICRP)
-    elif registration_type == "sCT":
-        ref_patient = Atlas.atlas_to_syntheticCT(atlas=atlas_patient)
-        ref_ICRP = Atlas.atlas_to_syntheticCT(atlas=atlas_ICRP)
-    else:
-        raise ValueError
+#     if save_path:
+#         sitk.WriteImage(mask, save_path)
 
-    AR = AffineRegistration(fixed_image=ref_ICRP, moving_image=ref_patient)
-    AR.CalculateInitialTransform()
-    AR.DeclareRegistrationMethod()
-    AR.ExecuteRegistration(save_path=transform_save_path)
-    AR.ApplyTransform(transform=AR.final_transform.GetInverse(),
-                      img1=atlas_ICRP, referenceImage=atlas_patient, save_path=save_path)
-
-    Metric.organs_DSC(atlas1=atlas_patient, atlas2=save_path, save_path=patient+"\\DSC.xlsx",
-                      column_name="Affine_" + str(nb_run),
-                      addMode=addMode)
+#     return mask
 
 
-def bspline_after_affine(pname, grid_spacing, registration_type,
-                         metric="MeanSquares", optimizer="LBFGSB",
-                         fixed_image_mask: bool = True, nb_run=0):
+# # ======================================================================================================================
+# # Call Function
+# # ======================================================================================================================
+# def translation(pname):
+#     patient = os.path.join(gender, pname)
+#     fixed_image = patient + "\\Atlas.nii"
+#     moving_image = "ICRP\\" + gender + "\\Atlas.nii"
+#     save_path = "E:\\PETDose_dataset\\RegistrationData\\" + pname + "\\ICRP.nii"
 
-    patient = os.path.join(gender, pname)
-    actual_moving_image = patient + "\\regist_affine.nii"
-    atlas = patient + "\\Atlas.nii"
-
-    image_save_path = patient + "\\regist_Bspline_" + registration_type+"_" + str(grid_spacing)+"_"+str(nb_run) + ".nii"
-    transform_save_path = patient + "\\Bspline_" + registration_type+"_" + str(grid_spacing)+"_"+str(nb_run)+".tfm"
-    excel_path = patient + "\\stat.xlsx"
-
-    # Select different type of image for registration
-    if registration_type == "3organ":
-        moving_image = create_3_organ_as_ref(atlas=actual_moving_image)
-        fixed_image = create_3_organ_as_ref(atlas=atlas)
-    elif registration_type == "sCT":
-        moving_image = Atlas.atlas_to_syntheticCT(atlas=actual_moving_image)
-        fixed_image = Atlas.atlas_to_syntheticCT(atlas=atlas)
-        # sitk.WriteImage(moving_image, patient+"\\moving_sCT.nii")
-        # sitk.WriteImage(fixed_image, patient+"\\fixed_sCT.nii")
-        # pass
-    else:
-        raise KeyError
-
-    # Whether we use body mask as fixed_image_mask
-    if fixed_image_mask:
-        fixed_image_mask = Atlas.individual_atlas(atlas, ID=10)
-    else:
-        fixed_image_mask = None
-
-    # START!!
-    BR = BSplineRegistration(fixed_image, moving_image,
-                             grid_physical_spacing=[grid_spacing, grid_spacing, grid_spacing])
-    BR.DeclareRegistrationMethod(optimizer=optimizer, metric=metric, fixed_image_mask=fixed_image_mask)
-    BR.ExecuteRegistration(save_path=transform_save_path)
-    BR.ApplyTransform(transform=BR.final_transform, img1=actual_moving_image, referenceImage=patient + "\\Atlas.nii",
-                      save_path=image_save_path)
-
-    # calculate metric
-    # Metric.DiceCoefficient(
-    #     atlas1=patient+"\\Atlas.nii", atlas2=image_save_path, excel_path=excel_path,
-    #     column=registration_type+"_"+str(grid_spacing)+"_"+str(nb_run)
-    # )
-    ImageProcess.Atlas.OrganVolumeDifference(
-        atlas1=patient+"\\Atlas.nii", atlas2=image_save_path, excel_path=excel_path,
-        column=registration_type+"_"+str(grid_spacing)+"_"+str(nb_run),
-        IDs=OrganDict.EssentialOrganVolumeID
-    )
+#     TR = TranslationRegistration(fixed_image=fixed_image, moving_image=moving_image)
+#     TR.CalculateInitialTransform()
+#     TR.ApplyTransform(transform=TR.moving_initial_transform,
+#                       img1=moving_image, referenceImage=fixed_image,
+#                       save_path=save_path)
 
 
-def apply_transform(pname):
-    patient = os.path.join(gender, pname)
-    affine: sitk.Transform = sitk.ReadTransform(patient+"\\Affine.tfm")
-    bspline: sitk.Transform = sitk.ReadTransform(patient+"\\Bspline.tfm")
-    ICRP_arm = os.path.join("ICRP", gender, "Atlas.nii")
-    atlas = patient+"\\Atlas.nii"
-    save_path = patient+"\\Registration.nii"
+# def affine(pname, registration_type="3organ", haveArm=True, nb_run=0, addMode=True):
+#     patient = os.path.join(gender, pname)
+#     save_path = patient + "\\regist_affine_"+str(nb_run)+".nii"
+#     transform_save_path = patient + "\\Affine"+str(nb_run)+".tfm"
+#     if haveArm:
+#         atlas_patient = patient + "\\Atlas.nii"
+#         ICRP = os.path.join("ICRP", gender)
+#         atlas_ICRP = ICRP + "\\Atlas.nii"
+#     else:
+#         atlas_patient = patient + "\\Atlas.nii"
+#         ICRP = os.path.join("ICRPnoArm", gender)
+#         atlas_ICRP = ICRP + "\\Atlas_noArm.nii"
 
-    R = RegistrationBase()
-    img = R.ApplyTransform(transform=affine.GetInverse(), img1=ICRP_arm, referenceImage=atlas)
-    img = R.ApplyTransform(transform=bspline, img1=img, referenceImage=atlas, save_path=save_path)
+#     if registration_type == "3organ":
+#         ref_patient = create_3_organ_as_ref(atlas=atlas_patient)
+#         ref_ICRP = create_3_organ_as_ref(atlas=atlas_ICRP)
+#     elif registration_type == "sCT":
+#         ref_patient = Atlas.atlas_to_syntheticCT(atlas=atlas_patient)
+#         ref_ICRP = Atlas.atlas_to_syntheticCT(atlas=atlas_ICRP)
+#     else:
+#         raise ValueError
 
-    return img
+#     AR = AffineRegistration(fixed_image=ref_ICRP, moving_image=ref_patient)
+#     AR.CalculateInitialTransform()
+#     AR.DeclareRegistrationMethod()
+#     AR.ExecuteRegistration(save_path=transform_save_path)
+#     AR.ApplyTransform(transform=AR.final_transform.GetInverse(),
+#                       img1=atlas_ICRP, referenceImage=atlas_patient, save_path=save_path)
+
+#     Metric.organs_DSC(atlas1=atlas_patient, atlas2=save_path, save_path=patient+"\\DSC.xlsx",
+#                       column_name="Affine_" + str(nb_run),
+#                       addMode=addMode)
+
+
+# def bspline_after_affine(pname, grid_spacing, registration_type,
+#                          metric="MeanSquares", optimizer="LBFGSB",
+#                          fixed_image_mask: bool = True, nb_run=0):
+
+#     patient = os.path.join(gender, pname)
+#     actual_moving_image = patient + "\\regist_affine.nii"
+#     atlas = patient + "\\Atlas.nii"
+
+#     image_save_path = patient + "\\regist_Bspline_" + registration_type+"_" + str(grid_spacing)+"_"+str(nb_run) + ".nii"
+#     transform_save_path = patient + "\\Bspline_" + registration_type+"_" + str(grid_spacing)+"_"+str(nb_run)+".tfm"
+#     excel_path = patient + "\\stat.xlsx"
+
+#     # Select different type of image for registration
+#     if registration_type == "3organ":
+#         moving_image = create_3_organ_as_ref(atlas=actual_moving_image)
+#         fixed_image = create_3_organ_as_ref(atlas=atlas)
+#     elif registration_type == "sCT":
+#         moving_image = Atlas.atlas_to_syntheticCT(atlas=actual_moving_image)
+#         fixed_image = Atlas.atlas_to_syntheticCT(atlas=atlas)
+#         # sitk.WriteImage(moving_image, patient+"\\moving_sCT.nii")
+#         # sitk.WriteImage(fixed_image, patient+"\\fixed_sCT.nii")
+#         # pass
+#     else:
+#         raise KeyError
+
+#     # Whether we use body mask as fixed_image_mask
+#     if fixed_image_mask:
+#         fixed_image_mask = Atlas.individual_atlas(atlas, ID=10)
+#     else:
+#         fixed_image_mask = None
+
+#     # START!!
+#     BR = BSplineRegistration(fixed_image, moving_image,
+#                              grid_physical_spacing=[grid_spacing, grid_spacing, grid_spacing])
+#     BR.DeclareRegistrationMethod(optimizer=optimizer, metric=metric, fixed_image_mask=fixed_image_mask)
+#     BR.ExecuteRegistration(save_path=transform_save_path)
+#     BR.ApplyTransform(transform=BR.final_transform, img1=actual_moving_image, referenceImage=patient + "\\Atlas.nii",
+#                       save_path=image_save_path)
+
+#     # calculate metric
+#     # Metric.DiceCoefficient(
+#     #     atlas1=patient+"\\Atlas.nii", atlas2=image_save_path, excel_path=excel_path,
+#     #     column=registration_type+"_"+str(grid_spacing)+"_"+str(nb_run)
+#     # )
+#     ImageProcess.Atlas.OrganVolumeDifference(
+#         atlas1=patient+"\\Atlas.nii", atlas2=image_save_path, excel_path=excel_path,
+#         column=registration_type+"_"+str(grid_spacing)+"_"+str(nb_run),
+#         IDs=OrganDict.EssentialOrganVolumeID
+#     )
+
+
+# def apply_transform(pname):
+#     patient = os.path.join(gender, pname)
+#     affine: sitk.Transform = sitk.ReadTransform(patient+"\\Affine.tfm")
+#     bspline: sitk.Transform = sitk.ReadTransform(patient+"\\Bspline.tfm")
+#     ICRP_arm = os.path.join("ICRP", gender, "Atlas.nii")
+#     atlas = patient+"\\Atlas.nii"
+#     save_path = patient+"\\Registration.nii"
+
+#     R = RegistrationBase()
+#     img = R.ApplyTransform(transform=affine.GetInverse(), img1=ICRP_arm, referenceImage=atlas)
+#     img = R.ApplyTransform(transform=bspline, img1=img, referenceImage=atlas, save_path=save_path)
+
+#     return img
 
 
 if __name__ == "__main__":
-    os.chdir(r"E:\PETDose_dataset")
-    os.chdir("Registration")
-    gender = "Female"
+    print('hello world')
 
-    # pname = "CHAN_KUOC_KEI_255852"
-    # ==================================================================================================================
-    # Translation
-    # for pname in os.listdir(os.path.join(gender)):
-    #     translation(pname)
-    # Affine
-    # affine(pname, registration_type="3organ", haveArm=False, nb_run=0, addMode=False)
-    # for i in range(9):
-    #     i += 1
-    #     print("Iteration: ", i)
-    #     affine(pname, registration_type="3organ", haveArm=False, nb_run=i, addMode=True)
-
-    # Bspline
-    # def bsp():
-    #
-    #     excel_path = os.path.join(gender, pname, "stat.xlsx")
-    #     if os.path.exists(excel_path):
-    #         os.remove(excel_path)
-    #
-    #     ImageProcess.InfoStat.OrganVolumeDifference(atlas1=os.path.join(gender, pname, "Atlas.nii"),
-    #                                                 atlas2=os.path.join(gender, pname, "regist_Bspline.nii"),
-    #                                                 excel_path=excel_path, column="Regis", IDs=OrganDict.EssentialOrganVolumeID)
-    #     for i in range(10):
-    #         print("Iteration: ", i)
-    #         bspline_after_affine(pname, grid_spacing=200, registration_type="3organ", nb_run=i,
-    #                              metric="MeanSquares", optimizer="GradientDescentLineSearch",
-    #                              fixed_image_mask=True)
-    #
-    #     df = pd.read_excel(excel_path, index_col="ID", sheet_name=0)
-    #     columns = list(df)[1:]
-    #     averages = []
-    #     for column in columns:
-    #         diff_list = list(df[column])
-    #         diff_list = [np.abs(float(diff[0:-1])) for diff in diff_list]
-    #         t = str(np.average(diff_list))+"%"
-    #         averages.append(str(np.average(diff_list))+"%")
-    #
-    #     for column, average in zip(columns, averages):
-    #         df.loc[0, column] = average
-    #
-    #     df.to_excel(excel_path, index_label="ID")
-
-    # pname = "NUSSER_KARINE_97054107"
-    # bsp()
-    # apply_transform(pname)
-
-    create_3_organ_as_ref(atlas=r"E:\PETDose_dataset\Registration\Female\NUSSER_KARINE_97054107\Atlas.nii",
-                          save_path=r"E:\PETDose_dataset\Registration\Female\NUSSER_KARINE_97054107\ref.nii")
 
 
