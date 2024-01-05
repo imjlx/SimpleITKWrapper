@@ -11,77 +11,12 @@ import pandas as pd
 from tqdm import tqdm
 from scipy import optimize, integrate
 
-from ImageProcess import DCMTags
+from utils import DCMTags
 from utils import OrganDict
 
 from ImageProcess.Image import ImageProcessor, AtlasProcessor, DCMSeriesProcessor
 from ImageProcess.InfoStat import PropertyCalculator
 from ImageProcess.Atlas import OrganVolume
-
-
-class PETSeriesProcessor(DCMSeriesProcessor):
-    lamb_s = 1.052E-4  # s^(-1)
-    lamb_m = 6.312E-3  # m^(-1)
-    lamb_h = 0.37872  # h^(-1)
-
-    def __init__(self, folder: str = None, is_read_MetaDate: bool = True, **kwargs):
-        super().__init__(folder=folder, is_read_MetaData=is_read_MetaDate, **kwargs)
-
-    # Functions to get important info from MetaData
-    def GetInjectionTime(self) -> datetime.datetime:
-
-        MetaDate_DateTime = self.GetSpecificMetaData("0054|0016, 0018|1078")
-        if MetaDate_DateTime is not None:
-            out = DCMTags.StandardTime(MetaData_DateTime=MetaDate_DateTime)
-        else:
-            MetaData_Date = self.GetSpecificMetaData("0008|0022")
-            MetaDate_Time = self.GetSpecificMetaData("0054|0016, 0018|1072")
-            if MetaData_Date is not None and MetaDate_Time is not None:
-                out = DCMTags.StandardTime(MetaData_Date=MetaData_Date, MetaData_Time=MetaDate_Time)
-            else:
-                raise AttributeError("No Injection Time info in MetaData")
-
-        return out
-
-    def GetInjectionActivityInBq(self) -> float:
-        return self.GetSpecificMetaData("0054|0016, 0018|1074")
-
-    def GetAcquisitionTime(self, s=0) -> datetime.datetime:
-        return DCMTags.StandardTime(
-            MetaData_Date=self.GetSpecificMetaData("0008|0022", s=s),
-            MetaData_Time=self.GetSpecificMetaData("0008|0032", s=s)
-        )
-
-    def GetTimeBetweenInjectionAndAcquisition(self) -> datetime.timedelta:
-        return self.GetAcquisitionTime(s=0) - self.GetInjectionTime()
-
-    def GetFrameDuration(self) -> datetime.timedelta:
-        return datetime.timedelta(milliseconds=self.GetSpecificMetaData("0018|1242"))
-
-    def GetDecayAttenuation(self) -> str:
-        return self.GetSpecificMetaData("0054|1102")
-
-    def GetDecayFactor(self, s=0) -> float:
-        return self.GetSpecificMetaData("0054|1321", s=s)
-
-    def GetAcquisitionTimeActivityInBq(self):
-        """
-        Calculate the ideal activity at the start of acquisition, assuming no elimination.
-        :return:
-        """
-        td_wait = self.GetTimeBetweenInjectionAndAcquisition().seconds
-        A0 = self.GetInjectionActivityInBq()
-        return A0 * np.exp(-self.lamb_s * td_wait)
-
-    @staticmethod
-    def calculate_decay_correction_t(decay_factor):
-        C = decay_factor
-        lamb = 1.052E-4
-        deltaT = 90
-
-        t_decay = np.log(C * (1 - np.exp(-lamb * deltaT)) / (lamb * deltaT)) / lamb
-        return t_decay
-
 
 # Organ raw activity with no rescale
 class OrganRawActivityCalculator(PropertyCalculator):

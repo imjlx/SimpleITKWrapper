@@ -97,10 +97,3 @@ class RegistrationBase(object):
 
         return transformed_image
 
-
-if __name__ == "__main__":
-    os.chdir("dataset")
-    R = RegistrationBase(fixed_image="AM_bone.nii", moving_image=os.path.join("ARMIJOS", "Bone.nii"))
-    initial_transform = R.CalculateInitialTransform()
-    R.ApplyTransform(transform=initial_transform, save_path=os.path.join("ARMIJOS", "Bone_initial.nii"))
-    pass

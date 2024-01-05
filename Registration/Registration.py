@@ -294,46 +294,46 @@ class RegistrationBase(object):
         plt.show()
 
 
-# class TranslationRegistration(RegistrationBase):
-#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-#         super(TranslationRegistration, self).__init__(fixed_image=fixed_image, moving_image=moving_image)
-#         self.optimized_transform = sitk.TranslationTransform(3)
+class TranslationRegistration(RegistrationBase):
+    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+        super(TranslationRegistration, self).__init__(fixed_image=fixed_image, moving_image=moving_image)
+        self.optimized_transform = sitk.TranslationTransform(3)
 
 
-# class AffineRegistration(RegistrationBase):
-#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-#         """
-#         Regist two images using affine transformation
-#         :param fixed_image:
-#         :param moving_image:
-#         :param kwargs: No kwargs needed
-#         """
-#         super().__init__(fixed_image, moving_image)
-#         self.optimized_transform = sitk.AffineTransform(3)
+class AffineRegistration(RegistrationBase):
+    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+        """
+        Regist two images using affine transformation
+        :param fixed_image:
+        :param moving_image:
+        :param kwargs: No kwargs needed
+        """
+        super().__init__(fixed_image, moving_image)
+        self.optimized_transform = sitk.AffineTransform(3)
 
 
-# class BSplineRegistration(RegistrationBase):
-#     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
-#         super().__init__(fixed_image, moving_image)
-#         if (fixed_image is not None) and (moving_image is not None) and ("grid_physical_spacing" in kwargs):
-#             self.DeclareOptimizedTransform(grid_physical_spacing=kwargs["grid_physical_spacing"])
+class BSplineRegistration(RegistrationBase):
+    def __init__(self, fixed_image=None, moving_image=None, **kwargs):
+        super().__init__(fixed_image, moving_image)
+        if (fixed_image is not None) and (moving_image is not None) and ("grid_physical_spacing" in kwargs):
+            self.DeclareOptimizedTransform(grid_physical_spacing=kwargs["grid_physical_spacing"])
 
-#     def DeclareOptimizedTransform(self, grid_physical_spacing):
-#         assert (self.fixed_image is not None) and (self.moving_image is not None), "Image unspecified."
-#         image_physical_spacing = [
-#             size * spacing for size, spacing in zip(self.fixed_image.GetSize(), self.fixed_image.GetSpacing())
-#         ]
-#         mesh_size = [
-#             int(image_size / grid_spacing + 0.5)
-#             for image_size, grid_spacing in zip(image_physical_spacing, grid_physical_spacing)
-#         ]
+    def DeclareOptimizedTransform(self, grid_physical_spacing):
+        assert (self.fixed_image is not None) and (self.moving_image is not None), "Image unspecified."
+        image_physical_spacing = [
+            size * spacing for size, spacing in zip(self.fixed_image.GetSize(), self.fixed_image.GetSpacing())
+        ]
+        mesh_size = [
+            int(image_size / grid_spacing + 0.5)
+            for image_size, grid_spacing in zip(image_physical_spacing, grid_physical_spacing)
+        ]
 
-#         self.optimized_transform = sitk.BSplineTransformInitializer(
-#             image1=self.fixed_image,
-#             transformDomainMeshSize=mesh_size
-#         )
+        self.optimized_transform = sitk.BSplineTransformInitializer(
+            image1=self.fixed_image,
+            transformDomainMeshSize=mesh_size
+        )
 
-#         return self.optimized_transform
+        return self.optimized_transform
 
 
 # # ======================================================================================================================

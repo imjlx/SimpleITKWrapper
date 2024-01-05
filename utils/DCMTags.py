@@ -40,9 +40,10 @@ def StandardTime(MetaData_Time=None, MetaData_Date=None, MetaData_DateTime=None)
         if MetaData_Date is None:
             MetaData_Date = "19000101"
         MetaData_DateTime = MetaData_Date + MetaData_Time
-    else:
-        assert MetaData_DateTime is not None
+    elif MetaData_DateTime is not None:
         MetaData_DateTime = MetaData_DateTime.split('.')[0]
+    else:
+        return None
 
     standard_time = datetime.datetime.strptime(MetaData_DateTime, '%Y%m%d%H%M%S')
     return standard_time
