@@ -5,21 +5,13 @@
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
-import os
 from typing import List
 
-# import ImageProcess.Atlas
-# import ImageProcess.Image
-# import ImageProcess.InfoStat
-# from ImageProcess import Atlas
-# from utils import OrganDict
-# import Metric
-
+import os
 import sys
-sys.path.append("E:\\package")
-sys.path.append("E:\\package\\SimpleITKWrapper")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import SimpleITKWrapper as sitkw
-
+import registration_callbacks
 
 # ======================================================================================================================
 # Class for Registration
@@ -29,18 +21,13 @@ class RegistrationBase(object):
     def __init__(self, fixed_image=None, moving_image=None, **kwargs):
 
         # Set two images
-        if fixed_image:
-            self.fixed_image = sitkw.Image.ReadImage(fixed_image)
-        else:
-            self.fixed_image = None
-        if moving_image is not None:
-            self.moving_image = ImageProcess.Image.ReadImage(moving_image)
-        else:
-            self.moving_image = None
+        self.SetFixedImage(fixed_image)
+        self.SetMovingImage(moving_image)
 
         # transform
         self.moving_initial_transform: sitk.Transform = sitk.Transform()
         self.optimized_transform: sitk.Transform = sitk.Transform()
+        # the main transform should be further determined in the child class
         self.final_transform: sitk.Transform = sitk.Transform()
 
         # Stored Metrics
@@ -48,26 +35,16 @@ class RegistrationBase(object):
         self.iterations_change_points: List[int] = list()
 
         # method
-        self.registration_method = None
+        self.method = None
 
     # Load image
-
     def SetFixedImage(self, img):
-        if isinstance(img, str):
-            self.fixed_image = sitk.ReadImage(img)
-        else:
-            assert isinstance(img, sitk.Image)
-            self.fixed_image = img
+        self.fixed_image = sitkw.ReadImageAsImage(img)
 
     def SetMovingImage(self, img):
-        if isinstance(img, str):
-            self.moving_image = sitk.ReadImage(img)
-        else:
-            assert isinstance(img, sitk.Image)
-            self.moving_image = img
+        self.moving_image = sitkw.ReadImageAsImage(img)
 
     # Initial Transform
-
     def InitialPadding(self):
         """
         Pad the fixed_image to make sure that no part of the moving_image would be transformed out of the canvas
@@ -93,6 +70,9 @@ class RegistrationBase(object):
         self.fixed_image = sitk.ConstantPad(image1=self.fixed_image, padLowerBound=padBound, padUpperBound=padBound)
 
     def CalculateInitialCenteredTransform(self, save_path=None):
+        """
+        Normally, we should firstly apply centered transform to match the center of two images.
+        """
         self.InitialPadding()
         initial_centered_transform = sitk.CenteredTransformInitializer(
             fixedImage=self.fixed_image,
@@ -107,11 +87,10 @@ class RegistrationBase(object):
         return initial_centered_transform
 
     def CalculateInitialTranslationTransform(self, moving_image, save_path=None):
-        if isinstance(moving_image, str):
-            moving_image = sitk.ReadImage(moving_image)
-        else:
-            assert isinstance(moving_image, sitk.Image)
-            moving_image: sitk.Image = moving_image
+        """
+        In some cases, we need to apply translation transform to match the uppermost position of the two images.
+        """
+        moving_image = sitkw.ReadImageAsImage(moving_image)
 
         def uppermost_z(img):
             arr = sitk.GetArrayFromImage(img)
@@ -132,13 +111,13 @@ class RegistrationBase(object):
 
         return translation_transform
 
-    def CalculateInitialTransform(self, if_apply_translation=True, save_path=None):
+    def CalculateInitialTransform(self, isMatchTop=False, save_path=None):
         # Apply centered transform to regular the origin and size
         centered_transform = self.CalculateInitialCenteredTransform()
         moving_image_centered = self.ApplyTransform(centered_transform)
 
         # calculate further translation to match the uppermost position of the two images.
-        if if_apply_translation:
+        if isMatchTop:
             translation_transform = self.CalculateInitialTranslationTransform(moving_image_centered)
             self.moving_initial_transform = sitk.CompositeTransform([centered_transform, translation_transform])
         else:
@@ -153,7 +132,7 @@ class RegistrationBase(object):
     def DeclareRegistrationMethod(
             self, fixed_image_mask=None, nb_iter: int = 100,
             interpolator=sitk.sitkNearestNeighbor, metric: str = "MeanSquares", optimizer: str = "GradientDescent",
-            apply_multi_resolution: bool = True,
+            apply_multi_resolution: bool = True, verbose: bool = False,
     ) -> sitk.ImageRegistrationMethod:
         """
         Declare sitk.ImageRegistrationMethod() which are the main part of Registrations.
@@ -167,41 +146,41 @@ class RegistrationBase(object):
         :return:
         """
         # declare an ImageRegistrationMethod() class
-        self.registration_method = sitk.ImageRegistrationMethod()
+        self.method = sitk.ImageRegistrationMethod()
 
         # Setup metric
         if metric == "MeanSquares":
-            self.registration_method.SetMetricAsMeanSquares()
+            self.method.SetMetricAsMeanSquares()
         elif metric == "JointHistogramMutualInformation":
-            self.registration_method.SetMetricAsJointHistogramMutualInformation(50)
+            self.method.SetMetricAsJointHistogramMutualInformation(50)
         elif metric == "MattesMutualInformation":
-            self.registration_method.SetMetricAsMattesMutualInformation(50)
+            self.method.SetMetricAsMattesMutualInformation(50)
         elif metric == "Correlation":
-            self.registration_method.SetMetricAsCorrelation()
+            self.method.SetMetricAsCorrelation()
         else:
             raise ValueError("Unsupported Metric.")
-        self.registration_method.SetMetricSamplingStrategy(self.registration_method.RANDOM)
-        self.registration_method.SetMetricSamplingPercentage(0.01)
+        self.method.SetMetricSamplingStrategy(self.method.RANDOM)
+        self.method.SetMetricSamplingPercentage(0.01)
         if fixed_image_mask:
-            self.registration_method.SetMetricFixedMask(fixed_image_mask)
+            self.method.SetMetricFixedMask(fixed_image_mask)
 
         # Setup interpolator
-        self.registration_method.SetInterpolator(interpolator)
+        self.method.SetInterpolator(interpolator)
 
         # Setup optimizer
         if optimizer == "GradientDescent":
-            self.registration_method.SetOptimizerAsGradientDescent(
+            self.method.SetOptimizerAsGradientDescent(
                 learningRate=1, numberOfIterations=nb_iter,
                 convergenceMinimumValue=1e-8, convergenceWindowSize=50,
             )
-            self.registration_method.SetOptimizerScalesFromPhysicalShift()
+            self.method.SetOptimizerScalesFromPhysicalShift()
         elif optimizer == "LBFGSB":
-            self.registration_method.SetOptimizerAsLBFGSB(
+            self.method.SetOptimizerAsLBFGSB(
                 gradientConvergenceTolerance=1e-5, numberOfIterations=nb_iter, maximumNumberOfCorrections=5,
                 maximumNumberOfFunctionEvaluations=2000, costFunctionConvergenceFactor=1e+7
             )
         elif optimizer == "GradientDescentLineSearch":
-            self.registration_method.SetOptimizerAsGradientDescentLineSearch(
+            self.method.SetOptimizerAsGradientDescentLineSearch(
                 learningRate=2, numberOfIterations=nb_iter,
                 convergenceMinimumValue=1e-6, convergenceWindowSize=10,
             )
@@ -210,36 +189,42 @@ class RegistrationBase(object):
 
         # Setup for the multi-resolution framework
         if apply_multi_resolution:
-            self.registration_method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
-            self.registration_method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
-            self.registration_method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
+            self.method.SetShrinkFactorsPerLevel(shrinkFactors=[4, 2, 1])
+            self.method.SetSmoothingSigmasPerLevel(smoothingSigmas=[2, 1, 0])
+            self.method.SmoothingSigmasAreSpecifiedInPhysicalUnitsOn()
 
         # Setup initial transform
-        self.registration_method.SetMovingInitialTransform(self.moving_initial_transform)
-        self.registration_method.SetInitialTransform(self.optimized_transform)
+        self.method.SetMovingInitialTransform(self.moving_initial_transform)
+        self.method.SetInitialTransform(self.optimized_transform)
 
         # Setup visualize command
-        self.registration_method.AddCommand(
-            sitk.sitkIterationEvent, lambda: self.store_metrics(self.registration_method)
-        )
-        self.registration_method.AddCommand(
-            sitk.sitkMultiResolutionIterationEvent, lambda: self.store_iterations_change_points(self.metric_values)
-        )
+        if verbose:
+            self.method.AddCommand(sitk.sitkStartEvent, registration_callbacks.metric_start_plot)
+            self.method.AddCommand(sitk.sitkEndEvent, registration_callbacks.metric_end_plot)
+            self.method.AddCommand(
+                sitk.sitkIterationEvent, lambda: registration_callbacks.metric_plot_values(self.method))
+        else:
+            self.method.AddCommand(
+                sitk.sitkIterationEvent, lambda: self.store_metrics(self.method)
+            )
+            self.method.AddCommand(
+                sitk.sitkMultiResolutionIterationEvent, lambda: self.store_iterations_change_points(self.metric_values)
+            )
 
-        return self.registration_method
+        return self.method
 
     def ExecuteRegistration(self, save_path=None):
         # Execute sitk.ImageRegistrationMethod(), before which the image type has to be cast
         fixed_image = sitk.Cast(self.fixed_image, sitk.sitkFloat32)
         moving_image = sitk.Cast(self.moving_image, sitk.sitkFloat32)
 
-        assert self.registration_method is not None, "registration_method hasn't been declared."
-        self.registration_method.Execute(fixed=fixed_image, moving=moving_image)
+        assert self.method is not None, "registration_method hasn't been declared."
+        self.method.Execute(fixed=fixed_image, moving=moving_image)
 
         # output optimization result.
         self.plot_metrics()
-        print(f"Final metric value:           {self.registration_method.GetMetricValue()}")
-        print(f"Optimizer stopping condition: {self.registration_method.GetOptimizerStopConditionDescription()}")
+        print(f"Final metric value:           {self.method.GetMetricValue()}")
+        print(f"Optimizer stopping condition: {self.method.GetOptimizerStopConditionDescription()}")
 
         # after optimized the optimized_transform, combine it with the moving_initial_transform
         self.final_transform = sitk.CompositeTransform([self.moving_initial_transform, self.optimized_transform])
@@ -251,17 +236,11 @@ class RegistrationBase(object):
 
         return self.final_transform
 
-    def ApplyTransform(self, transform, img1=None, referenceImage=None, save_path=None) -> object:
+    def ApplyTransform(self, transform=None, img1=None, referenceImage=None, save_path=None) -> object:
         # set default situation
-        if img1 is None:
-            img1 = self.moving_image
-        elif isinstance(img1, str):
-            img1 = sitk.ReadImage(img1)
-
-        if referenceImage is None:
-            referenceImage = self.fixed_image
-        elif isinstance(referenceImage, str):
-            referenceImage = sitk.ReadImage(referenceImage)
+        transform = self.final_transform if transform is None else transform
+        img1 = self.moving_image if img1 is None else sitkw.ReadImageAsImage(img1)
+        referenceImage = self.fixed_image if referenceImage is None else sitkw.ReadImageAsImage(referenceImage)
 
         # Apply transform
         transformed_image = sitk.Resample(
@@ -277,21 +256,21 @@ class RegistrationBase(object):
         return transformed_image
 
     # Helper functions to store metrics and plot
-
-    def store_metrics(self, registration_method):
-        self.metric_values.append(registration_method.GetMetricValue())
+    def store_metrics(self, method):
+        self.metric_values.append(method.GetMetricValue())
 
     def store_iterations_change_points(self, metric_values):
         self.iterations_change_points.append(len(metric_values))
 
     def plot_metrics(self):
-        plt.plot(self.metric_values, "r")
-        plt.plot(
-            self.iterations_change_points, [self.metric_values[index] for index in self.iterations_change_points], "b*",
-        )
-        plt.xlabel("Iteration Number", fontsize=12)
-        plt.ylabel("Metric Value", fontsize=12)
-        plt.show()
+        if len(self.metric_values) > 0:
+            plt.plot(self.metric_values, "r")
+            plt.plot(
+                self.iterations_change_points, [self.metric_values[index] for index in self.iterations_change_points], "b*",
+            )
+            plt.xlabel("Iteration Number", fontsize=12)
+            plt.ylabel("Metric Value", fontsize=12)
+            plt.show()
 
 
 class TranslationRegistration(RegistrationBase):

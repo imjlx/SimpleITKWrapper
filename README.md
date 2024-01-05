@@ -12,7 +12,7 @@ Some helpful functions and classes based on SimpleITK for medical image processi
 
 ## 使用方法：
 
-没有发行过python包（感觉这个项目暂时也不配），大家就直接clone到本地，然后直接import就行，我暂时就是这么用的（把 `"SimpleITKWrapper 's dir path"`替换成clone下来文件夹的父目录）
+没有发行过python包，大家就直接clone到本地，然后直接import就行，我暂时就是这么用的（把 `"SimpleITKWrapper 's dir path"`替换成clone下来文件夹的父目录）
 
 ```python
 import sys
