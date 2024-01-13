@@ -20,6 +20,12 @@ sys.path.append("SimpleITKWrapper 's dir path")
 import SimpleITKWrapper as sitkw
 ```
 
+或者用Git管理仓库是，可以添加子模块：
+
+```git
+git submodule add git@github.com:imjlx/SimpleITKWrapper.git
+```
+
 ## File Structure：
 
 - Basic：数据基础处理
