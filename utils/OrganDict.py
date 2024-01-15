@@ -4,6 +4,7 @@
 
 
 import os
+import pandas as pd
 
 # Organ IDs and their corresponding names
 OrganID = {
@@ -69,7 +70,7 @@ OrganHU = {
     91: 13, 92: -19, 93: 13, 94: 13,
 }
 
-# Organ Dose from ICRP 128,
+# 18F-FDG Organ Dose from ICRP 128,
 ICRP128OrganDose = {
     14: (1.2E-05, 1.6E-05, 2.4E-05, 3.9E-05, 7.1E-05), 46: (1.1E-05, 1.4E-05, 2.2E-05, 3.4E-05, 6.4E-05),
     18: (3.8E-05, 3.9E-05, 4.1E-05, 4.6E-05, 6.3E-05), 19: (8.8E-06, 1.1E-05, 1.8E-05, 2.9E-05, 5.6E-05),
@@ -118,6 +119,6 @@ OverlapOrganID = [10, 11, 13, 15, 18, 21, 22, 23, 24, 26, 28, 29, 32, 33, 37, 38
 EssentialOrganID = [10, 18, 26, 28, 32, 33, ]
 
 if __name__ == "__main__":
-    tt = ICRP128OrganDose[14]
+    df = pd.read_csv('residual_time.csv')
 
     pass

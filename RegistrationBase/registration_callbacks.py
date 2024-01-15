@@ -6,6 +6,9 @@ from IPython.display import clear_output
 from scipy import linalg
 from registration_utilities import registration_errors
 
+"""
+本文件来自SimpleITK官方教程。用于在jupyter notebook中配准时实时显示进度。
+"""
 
 # Callback we associate with the StartEvent, sets up our new data.
 def metric_start_plot():

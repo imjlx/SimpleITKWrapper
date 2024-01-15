@@ -213,7 +213,7 @@ class RegistrationBase(object):
 
         return self.method
 
-    def ExecuteRegistration(self, save_path=None):
+    def ExecuteRegistration(self, save_path=None, isPlot=True, save_plot_path=None):
         # Execute sitk.ImageRegistrationMethod(), before which the image type has to be cast
         fixed_image = sitk.Cast(self.fixed_image, sitk.sitkFloat32)
         moving_image = sitk.Cast(self.moving_image, sitk.sitkFloat32)
@@ -222,7 +222,7 @@ class RegistrationBase(object):
         self.method.Execute(fixed=fixed_image, moving=moving_image)
 
         # output optimization result.
-        self.plot_metrics()
+        self.plot_metrics(isPlot=isPlot, save_path=save_plot_path)
         print(f"Final metric value:           {self.method.GetMetricValue()}")
         print(f"Optimizer stopping condition: {self.method.GetOptimizerStopConditionDescription()}")
 
@@ -262,7 +262,7 @@ class RegistrationBase(object):
     def store_iterations_change_points(self, metric_values):
         self.iterations_change_points.append(len(metric_values))
 
-    def plot_metrics(self):
+    def plot_metrics(self, isPlot=True, save_path=None):
         if len(self.metric_values) > 0:
             plt.plot(self.metric_values, "r")
             plt.plot(
@@ -270,7 +270,10 @@ class RegistrationBase(object):
             )
             plt.xlabel("Iteration Number", fontsize=12)
             plt.ylabel("Metric Value", fontsize=12)
-            plt.show()
+            if isPlot:
+                plt.show()
+            if save_path is not None:
+                plt.savefig(save_path, bbox_inches='tight')
 
 
 class TranslationRegistration(RegistrationBase):
