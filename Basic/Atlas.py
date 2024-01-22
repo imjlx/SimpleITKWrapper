@@ -11,25 +11,22 @@ def GenerateOrganMask(atlas, ID, isWhole: bool = True, **kwargs) -> np.ndarray:
     Generate an Organ Mask based on input atlas, which has all zero background and all ones foreground
     """
     atlas = sitkw.ReadImageAsArray(atlas)
-    if ID in atlas or ID == 10:
-        if isWhole:
-            if ID not in OrganDict.MultipleOrgans:
-                mask = atlas.copy()
-                mask[atlas != ID] = 0
-                mask[atlas == ID] = 1
-            else:
-                mask = np.zeros_like(atlas)
-                mask[atlas == ID] = 1
-                for ID_sub in OrganDict.MultipleOrgans[ID]:
-                    mask[atlas == ID_sub] = 1
-        else:
-            mask = atlas.copy()
-            mask[atlas != ID] = 0
+    mask = np.zeros_like(atlas)
+    if ID not in atlas:
+        return None
+    
+    mask[atlas == ID] = 1
+    
+    if isWhole and ID in OrganDict.MultipleOrgans:
+        if ID == 10:
+            mask[atlas != 0] = 1
+        else: 
             mask[atlas == ID] = 1
-    else:
-        mask = None
+            for ID_sub in OrganDict.MultipleOrgans[ID]:
+                mask[atlas == ID_sub] = 1
 
     return mask
+
 
 
 def GenerateRestBodyMask(atlas, IDs, **kwargs):

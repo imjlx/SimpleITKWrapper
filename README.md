@@ -12,7 +12,7 @@ Some helpful functions and classes based on SimpleITK for medical image processi
 
 ## 使用方法：
 
-没有发行过python包，大家就直接clone到本地，然后直接import就行，我暂时就是这么用的（把 `"SimpleITKWrapper 's dir path"`替换成clone下来文件夹的父目录）
+clone到本地，然后直接import就行（把 `"SimpleITKWrapper 's dir path"`替换成clone下来文件夹的父目录）
 
 ```python
 import sys
@@ -20,7 +20,7 @@ sys.path.append("SimpleITKWrapper 's dir path")
 import SimpleITKWrapper as sitkw
 ```
 
-或者用Git管理仓库是，可以添加子模块：
+或者用Git管理仓库时，可以添加子模块（建议的方案）：
 
 ```git
 git submodule add git@github.com:imjlx/SimpleITKWrapper.git
@@ -31,9 +31,13 @@ git submodule add git@github.com:imjlx/SimpleITKWrapper.git
 - Basic：数据基础处理
   - Image：医疗图像读取（包括DICOM系列文件的读取、信息提取等）
   - Atlas：分割数据集的一些处理函数
-- Registration：有待整理。配准相关
-- Resampling：重采样相关
+- RegistrationBase：配准相关
+  - Registration：配准的主要代码、接口
+  - registration_callbacks、registration_utilities：SimpleITK官方教程中的辅助函数，用于画动态图
+  - Metric：有待整理
+- ResamplingBase：重采样相关
+  - Resampling：重采样的主要代码、接口
 - InfoStat：有待整理。用于在图像中挖掘信息，比如估算体重、器官大小、PET剂量等
 - utils：其他相关文件
   - DCMTags：DICOM文件常用MetaData含义
-  - OrganDict：分割图像标准器官ID值（暂不知道是哪个标准，反正我都是这么设的）
+  - OrganDict：分割图像标准器官ID值

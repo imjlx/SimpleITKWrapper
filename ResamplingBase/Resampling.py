@@ -5,7 +5,7 @@ import SimpleITK as sitk
 
 def ResampleToNewSpacing(img: sitk.Image, new_spacing: tuple, is_label: bool = False, default_value=0, dtype=None) -> sitk.Image:
     """
-    将原图像重采样到新的分辨率
+    将图像重采样到新的分辨率，其他不变
     :param img: 原图像
     :param new_spacing: 新的分辨率
     :param is_label: 是否为分割图像（决定插值方式）
