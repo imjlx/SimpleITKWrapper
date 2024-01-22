@@ -13,7 +13,7 @@ from Basic.Image import PrintBasicInfo
 from Basic import Atlas; importlib.reload(Atlas)
 
 from RegistrationBase import Registration; importlib.reload(Registration)
-import Resampling; importlib.reload(Resampling)
+from ResamplingBase import Resampling; importlib.reload(Resampling)
 
 from utils import DCMTags; importlib.reload(DCMTags)
 from utils.DCMTags import StandardTime
