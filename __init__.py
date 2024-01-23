@@ -12,8 +12,18 @@ from Basic.Image import PrintBasicInfo
 
 from Basic import Atlas; importlib.reload(Atlas)
 
+from InfoStat.Atlas import OrganVolumeCalculator
+CalculateOrganVolume: OrganVolumeCalculator = OrganVolumeCalculator()
+
+from InfoStat.PET import OrganRawActivityCalculator, OrganActivityCalculator, OrganCumulatedActivityCalculator
+CalRawActivity: OrganRawActivityCalculator = OrganRawActivityCalculator()
+CalActivity: OrganActivityCalculator = OrganActivityCalculator()
+CalCumActivity: OrganCumulatedActivityCalculator = OrganCumulatedActivityCalculator()
+
+
 from RegistrationBase import Registration; importlib.reload(Registration)
 from ResamplingBase import Resampling; importlib.reload(Resampling)
 
 from utils import DCMTags; importlib.reload(DCMTags)
+from utils import OrganDict; importlib.reload(OrganDict)
 from utils.DCMTags import StandardTime

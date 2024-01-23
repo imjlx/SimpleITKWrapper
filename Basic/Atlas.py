@@ -2,9 +2,10 @@
 import numpy as np
 import SimpleITK as sitk
 
-from utils import OrganDict
-import Basic.Image as sitkw
+import SimpleITKWrapper as sitkw
+from SimpleITKWrapper.utils import OrganDict
 
+# ==================================== Extract Organ Mask ====================================
 
 def GenerateOrganMask(atlas, ID, isWhole: bool = True, **kwargs) -> np.ndarray:
     """
@@ -28,13 +29,15 @@ def GenerateOrganMask(atlas, ID, isWhole: bool = True, **kwargs) -> np.ndarray:
     return mask
 
 
+def GenerateRestBodyMask(atlas, IDs: list, **kwargs) -> np.ndarray:
+    """Generate a whole body mask with several holes.
 
-def GenerateRestBodyMask(atlas, IDs, **kwargs):
-    """
-    Generate a whole body mask with several holes.
-    :param atlas:
-    :param IDs: The organ IDs that will be holes. Automatically ignore 10 in it.
-    :return:
+    Args:
+        atlas (_type_): Atlas image
+        IDs (list): Organs to be excluded
+
+    Returns:
+        _type_: _description_
     """
     atlas = sitkw.ReadImageAsArray(atlas)
     mask = GenerateOrganMask(atlas=atlas, ID=10)
@@ -46,7 +49,11 @@ def GenerateRestBodyMask(atlas, IDs, **kwargs):
     return mask
 
 
+# ==================================== Apply Organ Mask ====================================
+
 def GenerateMaskedArray(img, mask, **kwargs) -> np.ndarray:
+    """Get a masked array with pixels outside the mask set to zero.
+    """
     img_array = sitkw.ReadImageAsArray(img)
 
     if mask is not None:
@@ -58,6 +65,8 @@ def GenerateMaskedArray(img, mask, **kwargs) -> np.ndarray:
 
 
 def GenerateMaskedImage(img, mask, **kwargs) -> sitk.Image:
+    """Get a masked image with pixels outside the mask set to zero.
+    """
     img_masked = GenerateMaskedArray(img=img, mask=mask)
     if img_masked is not None:
         img_masked = sitk.GetImageFromArray(img_masked)
@@ -68,6 +77,8 @@ def GenerateMaskedImage(img, mask, **kwargs) -> sitk.Image:
 
 
 def GenerateMaskedOneLineArray(img, mask, **kwargs):
+    """Get an one line array containing pixels only in the mask.
+    """
     # Get 3D ndArray
     img_array = sitkw.ReadImageAsArray(img)
 

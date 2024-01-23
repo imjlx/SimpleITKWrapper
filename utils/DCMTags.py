@@ -14,7 +14,7 @@ DCMTags_Patient = {
 DCMTags_Series = {
     "0008|0021": "Series Date",     "0008|0031": "Series Time",
     "0028|0051": "Corrected Image", "0054|1102": "Decay Correction",
-    "0054|1000": "Series Type",     "0054|1001": "Units"
+    "0054|1000": "Series Type",     "0054|1001": "Units"    # BQML
 }
 
 DCMTags_PETImage = {

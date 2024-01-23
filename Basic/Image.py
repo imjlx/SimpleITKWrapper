@@ -142,7 +142,7 @@ class ImageProcessor(object):
 # ==================================== DICOM Image Processor Class ==================================== #
 
 class DCMSeriesProcessor(ImageProcessor):
-    def __init__(self, folder: str = None, is_read_MetaData: bool = True, **kwargs):
+    def __init__(self, folder: str = None, is_read_MetaData: bool = True):
         super().__init__()
         self.fnames: List[str] = []
         self.reader: sitk.ImageSeriesReader = sitk.ImageSeriesReader()
@@ -243,8 +243,8 @@ class PETSeriesProcessor(DCMSeriesProcessor):
     lamb_m = 6.312E-3  # m^(-1)
     lamb_h = 0.37872  # h^(-1)
 
-    def __init__(self, folder: str = None, is_read_MetaDate: bool = True, **kwargs):
-        super().__init__(folder=folder, is_read_MetaData=is_read_MetaDate, **kwargs)
+    def __init__(self, folder: str = None, is_read_MetaDate: bool = True):
+        super().__init__(folder=folder, is_read_MetaData=is_read_MetaDate)
 
     # Functions to get important info from MetaData
     def GetInjectionTime(self) -> datetime.datetime:

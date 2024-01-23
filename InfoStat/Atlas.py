@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 
 import SimpleITKWrapper as sitkw
-from SimpleITKWrapper.InfoStat.InfoStat import PropertyCalculator
-from SimpleITKWrapper.utils import OrganDict
+from SimpleITKWrapper.InfoStat.base import PropertyCalculator
 
 
 class OrganVolumeCalculator(PropertyCalculator):
@@ -31,6 +30,4 @@ class OrganVolumeCalculator(PropertyCalculator):
 
         return volume
 
-
-OrganVolume = OrganVolumeCalculator()
 

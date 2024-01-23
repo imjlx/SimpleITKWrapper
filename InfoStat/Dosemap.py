@@ -6,75 +6,60 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from ImageProcess.InfoStat import PropertyCalculator
-from ImageProcess.Image import ImageProcessor, AtlasProcessor
-from ImageProcess.PET import PETSeriesProcessor, OrganCumulatedActivityCalculator
-from utils.ICRPReference import F18_bladder_cumulate_activity
-from utils.OrganDict import OrganID
-
+import SimpleITKWrapper as sitkw
+from SimpleITKWrapper.InfoStat.base import PropertyCalculator
 
 # Dosemap Process: Organ Dose
 class OrganDoseCalculator(PropertyCalculator):
-    def __init__(self, dosemap=None, atlas=None, pet=None, folder=None, **kwargs):
-        super().__init__(dosemap=dosemap, atlas=atlas, pet=pet, **kwargs)
-        self.folder = folder
-        self.Ac = 1E6  # MBq·s
+    """ Class used to calculate Organ Dose based on dosemap.
+    > Used for the dosemap output by GATE, whose unit is Gy. 
+    > Pixel value's Physical meaning: With total N disintegrations, how much dose is delivered to this voxel.
+    > To calculate the dose of one organ, the dose of all voxels in that organ should be averaged.
+    > Organ Dose (mGy) = Mean(dosemap(organ)) / N * Actual total disintegrations * 1E3
+    """
+    def __init__(self, dosemap=None, atlas=None, **kwargs):
+        super().__init__(dosemap=dosemap, atlas=atlas, **kwargs)
+        self.N = kwargs.get("N", None)
 
-    def SetCumulatedActivityByInjection(self, isPerInjection=True):
-        if isPerInjection:
-            injection = 1E6  # Bq
-        else:
-            assert self.folder is not None
-            pet_reader = PETSeriesProcessor(folder=self.folder)
-            injection = pet_reader.GetInjectionActivityInBq()
-
-        self.Ac = injection / PETSeriesProcessor.lamb_s
-
-        return self.Ac
-
-    def SetCumulatedActivityByPET(self, isPerInjection=True, **kwargs):
-        assert (self.pet is not None) and (self.atlas is not None)
-        calculator = OrganCumulatedActivityCalculator(pet=self.pet, atlas=self.atlas, folder=self.folder)
-        self.Ac = calculator.CalculateOneOrgan(ID=10, **kwargs)
-
-        if isPerInjection:
-            assert self.folder is not None
-            pet_reader = PETSeriesProcessor(folder=self.folder)
-            self.Ac = self.Ac / pet_reader.GetInjectionActivityInBq() * 1E6
-        return self.Ac
-
-    def SetCumulatedActivityByICRP(self, age=18, isPerInjection=True):
-
-        activity_bladder = F18_bladder_cumulate_activity(age=age)
-        self.Ac = (0.21 + 0.11 + 0.079 + 0.13 + 1.7 + activity_bladder) * 3600
-
-        if not isPerInjection:
-            assert self.folder is not None
-            pet_reader = PETSeriesProcessor(folder=self.folder)
-            self.Ac *= pet_reader.GetInjectionActivityInBq()
-
-        return self.Ac
+        self.Ac = kwargs.get("Ac", None)
 
     def CalculateOneOrgan(self, ID: int, **kwargs):
-        assert "N" in kwargs
-        N = kwargs["N"]
+        assert self.Ac is not None, "Calculate cumulated activity before organ dose."
+        N = kwargs.get("N", self.N)
 
-        dosemap_arr = AtlasProcessor.GenerateMaskedOneLineArray(
+        dosemap_arr = sitkw.Atlas.GenerateMaskedOneLineArray(
             img=self.dosemap,
-            mask=AtlasProcessor.GenerateOrganMask(atlas=self.atlas, ID=ID, **kwargs)
+            mask=sitkw.Atlas.GenerateOrganMask(atlas=self.atlas, ID=ID, **kwargs)
         )
         if dosemap_arr is not None:
-            # Ac[MBq·s], N[], dosemap_arr[Gy],
+            # Ac[Bq·s=disintegration], N[disintegration], dosemap_arr[Gy],
             dose = np.average(dosemap_arr) / N * self.Ac * 1E3  # dose[mGy]
         else:
             dose = None
         return dose
+    
+    def GetCA_FromInjection(self, injection: float, ratio: float = 1, lamb_s: float = 1.052E-4) -> float:
+        """Calculate the cumulated activity based on injection activity.
+        > Assume that most (defined by ratio) of the injected nuclide decayed in whole body.
+        > Therefore, by integrating the decay equation from 0 to infinity starting from the injection activity,
+            we can get the cumulated activity.
+        Args:
+            injection (float): injection activity (Bq)
+            ratio (float, optional): The ratio of injected nuclide decayed in whole body. Defaults to 1.
+            lamb_s (float, optional): Decay constant of the injected nuclide. Defaults to 1.052E-4 (F18)
+        """
+        self.Ac = injection / lamb_s * ratio
+        return self.Ac
 
+    def GetCA_FromPET(self, pet, atlas, **kwargs) -> float:
+        """Calcualte the cumulated activity based on PET image, which can be easily done by OrganCumulatedActivityCalculator.
+        """
+        self.Ac = sitkw.CalCumActivity(ID=10, pet=pet, atlas=atlas, **kwargs)
+        return self.Ac
 
 class OrganDoseUncertaintyCalculator(OrganDoseCalculator):
     def __init__(self, uncertainty=None, dosemap=None, atlas=None, **kwargs):
         super().__init__(dosemap=dosemap, atlas=atlas, uncertainty=uncertainty, **kwargs)
-        pass
 
     def CalculateOneOrgan(self, ID: int, **kwargs) -> float:
         assert self.dosemap is not None
@@ -161,51 +146,5 @@ class DVHDrawer(object):
         sheet.to_excel(save_path)
 
 
-if __name__ == "__main__":
-    def extract_dose_in_organ(pname="AnonyP11S1_PETCT07347"):
-        IDs = [10, 13, 15, 18, 19, 24, 26, 28, 32, 33, 38, 44, 46, 65, 66, 67]
 
-        os.chdir(r"E:\PETDose_dataset\Pediatric")
-        pet=os.path.join(pname, "PET.nii")
-        atlas=os.path.join(pname, "Atlas.nii")
-        folder=os.path.join(pname, "PET")
-        dosemap = ImageProcessor.ReadImageAsArray(os.path.join(pname, "GATE_output", "PET_CT", "dose.nii"))
-
-        # Standardization
-        calculator = OrganCumulatedActivityCalculator(pet=pet, atlas=atlas, folder=folder)
-        Ac = calculator.CalculateOneOrgan(ID=10, rescale_method="OutRangeBody")
-        pet_reader = PETSeriesProcessor(folder=folder)
-        Ac = Ac / pet_reader.GetInjectionActivityInBq() * 1E6
-        dosemap = dosemap / 5E8 * Ac * 1E3
-
-        for ID in IDs:
-            mask = AtlasProcessor.GenerateOrganMask(atlas, ID)
-            arr = AtlasProcessor.GenerateMaskedOneLineArray(dosemap, mask)
-            np.save(arr=arr, file=os.path.join(pname, "GATE_output", "PET_CT", str(ID)+".npy"))
-
-    def rescale_dose(pname="AnonyP11S1_PETCT07347"):
-        df_PETCT = pd.read_excel(r"E:\PETDose_dataset\Dose_PETCT.xlsx", sheet_name=0, index_col="PatientName")
-        df_new = pd.read_excel(r"E:\PETDose_dataset\Dose.xlsx", sheet_name=0, index_col="PatientName")
-        IDs = [10, 13, 15, 18, 19, 24, 26, 28, 32, 33, 38, 44, 46, 65, 66, 67]
-        save_folder = os.path.join(pname, "GATE_output", "SplitOrgan")
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
-
-        for ID in IDs:
-            dose = np.load(os.path.join(pname, "GATE_output", "PET_CT", str(ID)+".npy"))
-            dose = dose / df_PETCT.loc[pname, ID] * df_new.loc[pname, ID]
-            np.save(os.path.join(pname, "GATE_output", "SplitOrgan", str(ID)+".npy"), dose)
-
-
-    os.chdir(r"E:\PETDose_dataset\Pediatric")
-    # extract_dose_in_organ()
-    # rescale_dose()
-
-    for pname in tqdm(os.listdir()):
-        # extract_dose_in_organ(pname)
-        rescale_dose(pname)
-        pass
-
-    # print(np.mean(np.load(r"E:\PETDose_dataset\Pediatric\AnonyP11S1_PETCT07347\GATE_output\SplitOrgan\18.npy")))
-    pass
 
