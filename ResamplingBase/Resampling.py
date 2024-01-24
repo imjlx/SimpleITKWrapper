@@ -1,6 +1,7 @@
 
 
 import SimpleITK as sitk
+import SimpleITKWrapper as sitkw
 
 
 def ResampleToNewSpacing(img: sitk.Image, new_spacing: tuple, is_label: bool = False, default_value=0, dtype=None) -> sitk.Image:
@@ -54,6 +55,8 @@ def ResampleToReferenceImage(img: sitk.Image, ref: sitk.Image, is_label: bool = 
     :param dtype: 数据类型
     :return: 重采样后的图像
     """
+    img = sitkw.ReadImageAsImage(img)
+    ref = sitkw.ReadImageAsImage(ref)
     # 声明resampler
     resampler = sitk.ResampleImageFilter()
     # 基本信息

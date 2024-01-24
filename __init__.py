@@ -20,6 +20,8 @@ CalRawActivity: OrganRawActivityCalculator = OrganRawActivityCalculator()
 CalActivity: OrganActivityCalculator = OrganActivityCalculator()
 CalCumActivity: OrganCumulatedActivityCalculator = OrganCumulatedActivityCalculator()
 
+from InfoStat.Dosemap import OrganDoseCalculator, OrganDoseUncertaintyCalculator
+
 
 from RegistrationBase import Registration; importlib.reload(Registration)
 from ResamplingBase import Resampling; importlib.reload(Resampling)
